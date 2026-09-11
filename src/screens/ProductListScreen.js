@@ -5,12 +5,15 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useProducts } from '../hooks/useProducts';
+import { useState } from 'react';
 
-export default function ProductListScreen() {
+export default function ProductListScreen({ navigation }) {
+  const [searchText, setSearchText] = useState(''); 
   const {
     products,
     total,
@@ -22,11 +25,23 @@ export default function ProductListScreen() {
     loadMore,
     retry,
     retryLoadMore,
-  } = useProducts();
+  } = useProducts(searchText);
 
   function renderProduct({ item }) {
     return (
-      <View style={styles.card}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`View details for ${item.title}`}
+        onPress={() =>
+          navigation.navigate('ProductDetail', {
+            productId: item.id,
+          })
+        }
+        style={({ pressed }) => [
+          styles.card,
+          pressed && styles.cardPressed,
+        ]}
+      >
         <Image
           source={{ uri: item.thumbnail }}
           style={styles.thumbnail}
@@ -43,23 +58,53 @@ export default function ProductListScreen() {
             ${item.price.toFixed(2)}
           </Text>
         </View>
-      </View>
+      </Pressable>
     );
   }
 
   return (
     <SafeAreaView style={styles.screen}>
-      <View style={styles.header}>
-        <Text style={styles.heading}>Product Catalog</Text>
-        <Text style={styles.subtitle}>
-          Discover your next favourite product.
-        </Text>
-      </View>
+<View style={styles.header}>
+  <Text style={styles.heading}>Product Catalog</Text>
+
+  <Text style={styles.subtitle}>
+    Discover your next favourite product.
+  </Text>
+
+  <View style={styles.searchContainer}>
+    <TextInput
+      style={styles.searchInput}
+      placeholder="Search products..."
+      placeholderTextColor="#64748B"
+      value={searchText}
+      onChangeText={setSearchText}
+      autoCapitalize="none"
+      autoCorrect={false}
+      returnKeyType="search"
+      accessibilityLabel="Search products"
+    />
+
+    {searchText.length > 0 && (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Clear search"
+        onPress={() => setSearchText('')}
+        style={styles.clearButton}
+      >
+        <Text style={styles.clearText}>Clear</Text>
+      </Pressable>
+    )}
+  </View>
+</View>
 
       {status === 'loading' && (
         <View style={styles.stateContainer}>
           <ActivityIndicator size="large" color="#2563EB" />
-          <Text style={styles.stateText}>Loading products...</Text>
+          <Text style={styles.stateText}>
+            {searchText.trim()
+                ? 'Searching products...'
+                : 'Loading products...'}
+          </Text>
         </View>
       )}
 
@@ -88,6 +133,8 @@ export default function ProductListScreen() {
           style={styles.list}
           data={products}
           renderItem={renderProduct}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           keyExtractor={(item) => String(item.id)}
           onEndReached={loadMore}
           onEndReachedThreshold={0.5}
@@ -103,8 +150,10 @@ export default function ProductListScreen() {
               </Text>
 
               <Text style={styles.stateText}>
-                There are no products to display.
-              </Text>
+                {searchText.trim()
+                    ? `No matches for "${searchText.trim()}". Try another keyword.`
+                    : 'There are no products to display.'}
+                </Text>
             </View>
           }
           ListFooterComponent={
@@ -264,5 +313,36 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#B91C1C',
     textAlign: 'center',
+  },
+    cardPressed: {
+    opacity: 0.7,
+    backgroundColor: '#EFF6FF',
+  },
+    searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+  },
+  searchInput: {
+    flex: 1,
+    minHeight: 48,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#0F172A',
+  },
+  clearButton: {
+    minHeight: 48,
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+  },
+  clearText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2563EB',
   },
 });

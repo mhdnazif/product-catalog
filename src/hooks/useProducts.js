@@ -2,8 +2,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { getProducts } from '../data/productsApi';
 
 const PAGE_SIZE = 20;
+const SEARCH_DELAY = 400;
 
-export function useProducts() {
+export function useProducts(searchText = '') {
+  const query = searchText.trim();
+
   const [products, setProducts] = useState([]);
   const [total, setTotal] = useState(0);
   const [status, setStatus] = useState('loading');
@@ -17,7 +20,6 @@ export function useProducts() {
   const hasMoreRef = useRef(false);
 
   const loadPage = useCallback(async (firstPage = false) => {
-    // Allow only one request at a time.
     if (requestRef.current !== null) {
       return;
     }
@@ -44,10 +46,10 @@ export function useProducts() {
       const data = await getProducts({
         limit: PAGE_SIZE,
         skip,
+        query,
         signal: controller.signal,
       });
 
-      // Ignore a request cancelled during cleanup.
       if (requestRef.current !== controller) {
         return;
       }
@@ -67,7 +69,6 @@ export function useProducts() {
           return data.products;
         }
 
-        // Prevent duplicate cards if the API repeats an item.
         const existingIds = new Set(
           previousProducts.map((product) => product.id)
         );
@@ -102,20 +103,38 @@ export function useProducts() {
         setLoadingMore(false);
       }
     }
-  }, []);
+  }, [query]);
 
   useEffect(() => {
-    loadPage(true);
+    // A new search always starts from the first page.
+    nextSkipRef.current = 0;
+    hasMoreRef.current = false;
+
+    setProducts([]);
+    setTotal(0);
+    setHasMore(false);
+    setStatus('loading');
+    setErrorMessage('');
+    setLoadMoreError('');
+    setLoadingMore(false);
+
+    // Empty search loads the normal catalog without a debounce delay.
+    const delay = query ? SEARCH_DELAY : 0;
+
+    const timer = setTimeout(() => {
+      loadPage(true);
+    }, delay);
 
     return () => {
+      clearTimeout(timer);
+
       const controller = requestRef.current;
       requestRef.current = null;
       controller?.abort();
     };
-  }, [loadPage]);
+  }, [query, loadPage]);
 
   function loadMore() {
-    // After a failure, wait for the user to tap Retry.
     if (status === 'success' && !loadMoreError) {
       loadPage(false);
     }
