@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Image,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import ProductImage from '../components/ProductImage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getProductById } from '../data/productsApi';
 
@@ -140,8 +140,9 @@ export default function ProductDetailScreen({ route }) {
           {Array.isArray(product.images) &&
           product.images.length > 0 ? (
             product.images.map((uri, index) => (
-              <Image
+              <ProductImage
                 key={`${uri}-${index}`}
+                uri={uri}
                 source={{ uri }}
                 style={styles.productImage}
                 resizeMode="contain"

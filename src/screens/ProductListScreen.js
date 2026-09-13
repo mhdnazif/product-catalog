@@ -1,13 +1,13 @@
 import {
   ActivityIndicator,
   FlatList,
-  Image,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import ProductImage from '../components/ProductImage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useProducts } from '../hooks/useProducts';
 import { useState } from 'react';
@@ -45,11 +45,10 @@ export default function ProductListScreen({ navigation }) {
           pressed && styles.cardPressed,
         ]}
       >
-        <Image
-          source={{ uri: item.thumbnail }}
+        <ProductImage
+          uri={item.thumbnail}
           style={styles.thumbnail}
-          resizeMode="contain"
-          accessibilityLabel={item.title}
+          accesibility={item.title}
         />
 
         <View style={styles.productInfo}>
