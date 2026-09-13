@@ -23,6 +23,9 @@ export default function ProductListScreen({ navigation }) {
     loadMoreError,
     hasMore,
     loadMore,
+    refresh,
+    refreshing,
+    refreshError,
     retry,
     retryLoadMore,
   } = useProducts(searchText);
@@ -133,6 +136,8 @@ export default function ProductListScreen({ navigation }) {
           style={styles.list}
           data={products}
           renderItem={renderProduct}
+          refreshing={refreshing}
+          onRefresh={refresh}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           keyExtractor={(item) => String(item.id)}
@@ -142,6 +147,31 @@ export default function ProductListScreen({ navigation }) {
             products.length === 0
               ? styles.emptyList
               : styles.listContent
+          }
+          ListHeaderComponent={
+            refreshError ? (
+              <View style={styles.refreshBanner}>
+                <Text style={styles.refreshErrorTitle}>
+                  Could not refresh products
+                </Text>
+
+                <Text style={styles.refreshErrorText}>
+                  {refreshError}
+                </Text>
+
+                <Text style={styles.refreshErrorText}>
+                  Your previous results are still displayed.
+                </Text>
+
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={refresh}
+                  style={styles.refreshRetryButton}
+                >
+                  <Text style={styles.retryText}>Retry refresh</Text>
+                </Pressable>
+              </View>
+            ) : null
           }
           ListEmptyComponent={
             <View style={styles.stateContainer}>
@@ -286,6 +316,33 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     color: '#0F172A',
+  },
+    refreshBanner: {
+    padding: 16,
+    marginBottom: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    backgroundColor: '#FEF2F2',
+  },
+  refreshErrorTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#991B1B',
+  },
+  refreshErrorText: {
+    marginTop: 6,
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#7F1D1D',
+  },
+  refreshRetryButton: {
+    alignSelf: 'flex-start',
+    marginTop: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: '#2563EB',
   },
   retryButton: {
     marginTop: 20,

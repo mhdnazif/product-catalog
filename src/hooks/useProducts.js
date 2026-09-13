@@ -11,35 +11,53 @@ export function useProducts(searchText = '') {
   const [total, setTotal] = useState(0);
   const [status, setStatus] = useState('loading');
   const [errorMessage, setErrorMessage] = useState('');
+
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState('');
   const [hasMore, setHasMore] = useState(false);
+
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState('');
 
   const requestRef = useRef(null);
   const nextSkipRef = useRef(0);
   const hasMoreRef = useRef(false);
 
-  const loadPage = useCallback(async (firstPage = false) => {
-    if (requestRef.current !== null) {
+  const loadPage = useCallback(async (mode = 'initial') => {
+    const isRefresh = mode === 'refresh';
+    const isMore = mode === 'more';
+
+    // Refresh takes priority over an existing page request.
+    if (isRefresh) {
+      const previousRequest = requestRef.current;
+      requestRef.current = null;
+      previousRequest?.abort();
+    } else if (requestRef.current !== null) {
       return;
     }
 
-    if (!firstPage && !hasMoreRef.current) {
+    if (isMore && !hasMoreRef.current) {
       return;
     }
 
     const controller = new AbortController();
     requestRef.current = controller;
 
-    const skip = firstPage ? 0 : nextSkipRef.current;
+    const skip = isMore ? nextSkipRef.current : 0;
 
-    if (firstPage) {
+    if (isRefresh) {
+      setRefreshing(true);
+      setRefreshError('');
+      setLoadingMore(false);
+      setLoadMoreError('');
+    } else if (isMore) {
+      setLoadingMore(true);
+      setLoadMoreError('');
+    } else {
       setStatus('loading');
       setErrorMessage('');
       setLoadMoreError('');
-    } else {
-      setLoadingMore(true);
-      setLoadMoreError('');
+      setRefreshError('');
     }
 
     try {
@@ -50,6 +68,7 @@ export function useProducts(searchText = '') {
         signal: controller.signal,
       });
 
+      // Ignore results belonging to a cancelled request.
       if (requestRef.current !== controller) {
         return;
       }
@@ -65,7 +84,8 @@ export function useProducts(searchText = '') {
       setHasMore(moreAvailable);
 
       setProducts((previousProducts) => {
-        if (firstPage) {
+        // Initial loads and refreshes replace the list.
+        if (!isMore) {
           return data.products;
         }
 
@@ -91,22 +111,25 @@ export function useProducts(searchText = '') {
           ? error.message
           : 'Something went wrong. Please try again.';
 
-      if (firstPage) {
+      if (isRefresh) {
+        // Keep existing products and pagination position.
+        setRefreshError(message);
+      } else if (isMore) {
+        setLoadMoreError(message);
+      } else {
         setErrorMessage(message);
         setStatus('error');
-      } else {
-        setLoadMoreError(message);
       }
     } finally {
       if (requestRef.current === controller) {
         requestRef.current = null;
         setLoadingMore(false);
+        setRefreshing(false);
       }
     }
   }, [query]);
 
   useEffect(() => {
-    // A new search always starts from the first page.
     nextSkipRef.current = 0;
     hasMoreRef.current = false;
 
@@ -115,14 +138,15 @@ export function useProducts(searchText = '') {
     setHasMore(false);
     setStatus('loading');
     setErrorMessage('');
-    setLoadMoreError('');
     setLoadingMore(false);
+    setLoadMoreError('');
+    setRefreshing(false);
+    setRefreshError('');
 
-    // Empty search loads the normal catalog without a debounce delay.
     const delay = query ? SEARCH_DELAY : 0;
 
     const timer = setTimeout(() => {
-      loadPage(true);
+      loadPage('initial');
     }, delay);
 
     return () => {
@@ -135,8 +159,19 @@ export function useProducts(searchText = '') {
   }, [query, loadPage]);
 
   function loadMore() {
-    if (status === 'success' && !loadMoreError) {
-      loadPage(false);
+    if (
+      status === 'success' &&
+      !refreshing &&
+      !loadMoreError &&
+      !refreshError
+    ) {
+      loadPage('more');
+    }
+  }
+
+  function refresh() {
+    if (status === 'success' && !refreshing) {
+      loadPage('refresh');
     }
   }
 
@@ -148,8 +183,11 @@ export function useProducts(searchText = '') {
     loadingMore,
     loadMoreError,
     hasMore,
+    refreshing,
+    refreshError,
     loadMore,
-    retry: () => loadPage(true),
-    retryLoadMore: () => loadPage(false),
+    refresh,
+    retry: () => loadPage('initial'),
+    retryLoadMore: () => loadPage('more'),
   };
 }
