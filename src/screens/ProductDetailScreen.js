@@ -143,9 +143,7 @@ export default function ProductDetailScreen({ route }) {
               <ProductImage
                 key={`${uri}-${index}`}
                 uri={uri}
-                source={{ uri }}
                 style={styles.productImage}
-                resizeMode="contain"
                 accessibilityLabel={
                   `${product.title}, image ${index + 1}`
                 }

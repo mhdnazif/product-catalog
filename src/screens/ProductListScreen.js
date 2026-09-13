@@ -48,7 +48,7 @@ export default function ProductListScreen({ navigation }) {
         <ProductImage
           uri={item.thumbnail}
           style={styles.thumbnail}
-          accesibility={item.title}
+          accesibilityLabel={item.title}
         />
 
         <View style={styles.productInfo}>
